@@ -4,7 +4,8 @@ import numpy as np
 import plotly.graph_objects as go
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+from streamlit_autorefresh import st_autorefresh
 
 # Add current directory to path
 sys.path.append(os.path.dirname(__file__))
@@ -51,7 +52,10 @@ threshold = 0.5 # Default decision boundary
 initial_capital = st.sidebar.number_input("Initial Capital ($)", value=10000)
 period = st.sidebar.selectbox("Backtest History", ["1mo", "1wk", "3mo"], index=0)
 
-base_dir = r"f:\commodity_trading_project"
+# Dynamically determine the project root directory
+script_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.dirname(script_dir)
+
 model_path = os.path.join(base_dir, "model", "crude_cnn_lstm.keras")
 scaler_path = os.path.join(base_dir, "model", "scaler.joblib")
 
@@ -63,15 +67,27 @@ def get_tester(model_p, scaler_p, sym):
 
 tester = get_tester(model_path, scaler_path, symbol)
 
-# Market Status Logic
-now_utc = datetime.utcnow()
-is_weekend = now_utc.weekday() >= 5 # 5=Saturday, 6=Sunday
-# Crude Oil typically closes Friday 5pm ET (22:00 UTC) and opens Sunday 6pm ET (23:00 UTC)
-market_open = not is_weekend
-if is_weekend:
-    # Check if it's Sunday after 6pm ET
-    if now_utc.weekday() == 6 and now_utc.hour >= 23:
-        market_open = True
+# Market Status Logic (Converted to IST)
+# IST = UTC + 5:30
+ist_tz = timezone(timedelta(hours=5, minutes=30))
+now_ist = datetime.now(ist_tz)
+
+# Crude Oil (CL=F) Market Hours in IST:
+# Closes: Friday 5:00 PM ET  -> Saturday 3:30 AM IST
+# Opens:  Sunday 6:00 PM ET  -> Monday 4:30 AM IST
+
+day = now_ist.weekday() # 0=Mon, 5=Sat, 6=Sun
+hour_float = now_ist.hour + now_ist.minute/60.0
+
+market_open = True
+if day == 5: # Saturday
+    if hour_float >= 3.5: # After 3:30 AM IST
+        market_open = False
+elif day == 6: # Sunday
+    market_open = False
+elif day == 0: # Monday
+    if hour_float < 4.5: # Before 4:30 AM IST
+        market_open = False
 
 # UI - Header & Refresh
 c_head, c_status = st.columns([3, 1])
@@ -86,9 +102,8 @@ with c_status:
         st.rerun()
 
 # Auto-refresh every 5 minutes (300 seconds)
-from streamlit_autorefresh import st_autorefresh
-if market_open:
-    st_autorefresh(interval=300 * 1000, key="data_refresh")
+# We show the refresh even if market is closed so the user knows the app is alive
+st_autorefresh(interval=300 * 1000, key="data_refresh")
 
 # Live Signal Section
 st.subheader("🔥 Current Market Signal")
@@ -99,11 +114,14 @@ with st.spinner("Fetching latest market data..."):
         is_buy = "BUY" in live_data['signal']
         sig_class = "buy-signal" if is_buy else "sell-signal"
         
+        # Convert data timestamp to IST for display
+        display_ts = live_data['timestamp'].astimezone(ist_tz) if live_data['timestamp'].tzinfo else live_data['timestamp']
+        
         st.markdown(f"""
             <div class="signal-box {sig_class}">
                 <h1 style='margin:0; color:{"#00ff00" if is_buy else "#ff0000"}'>{live_data['signal']}</h1>
                 <p style='font-size:1.2em; color:#8b949e'>Confidence: {live_data['confidence']} | Price: ${live_data['price']:.2f}</p>
-                <p style='font-size:0.9em; color:#484f58'>Last updated: {live_data['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p style='font-size:0.9em; color:#484f58'>Point Time (IST): {display_ts.strftime('%Y-%m-%d %H:%M:%S')}</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -126,6 +144,10 @@ if st.button("Run Full Backtest Analysis"):
         try:
             results = tester.run_backtest(initial_capital=initial_capital, threshold=threshold)
             
+            if results is None or len(results) == 0:
+                st.error("No backtest results available for the selected parameters. Try a longer history or different symbol.")
+                st.stop()
+
             # Display Metrics
             m1, m2, m3, m4 = st.columns(4)
             
@@ -171,6 +193,6 @@ else:
 
 # Auto-refresh info
 st.sidebar.markdown("---")
-st.sidebar.caption(f"Last sync: {datetime.now().strftime('%H:%M:%S')}")
+st.sidebar.caption(f"Last sync (IST): {now_ist.strftime('%H:%M:%S')}")
 if st.sidebar.button("Manual Sync Now"):
     st.rerun()

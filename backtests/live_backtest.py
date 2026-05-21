@@ -73,7 +73,7 @@ class LiveBacktester:
         scaled_features = self.scaler.transform(features_df)
         
         X = []
-        # We need the prices corresponding to the end of each window
+        #  the prices corresponding to the end of each window
         prices = []
         timestamps = []
 
@@ -183,8 +183,10 @@ class LiveBacktester:
         print(f"Equity curve saved to {output_plot}")
 
 if __name__ == "__main__":
-    # Correct paths relative to root or absolute
-    base_dir = r"f:\commodity_trading_project"
+    # Dynamically determine the project root directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.dirname(script_dir)
+    
     model_path = os.path.join(base_dir, "model", "crude_cnn_lstm.keras")
     scaler_path = os.path.join(base_dir, "model", "scaler.joblib")
     

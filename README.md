@@ -14,7 +14,7 @@ A hybrid **CNN-LSTM** deep learning project for predicting short-term price move
 ## 📂 Project Structure
 - `backtests/`: Contains the live prediction engine and Streamlit app.
 - `model/`: Saved weights (`.keras`) and feature scaler (`.joblib`).
-- `data/`: Data  scripts using `yfinance`.
+- `data/`: Data scripts using `yfinance`.
 - `experiments/`: Jupyter notebooks with the model training and architecture research.
 
 ##  Installation
@@ -65,4 +65,4 @@ Explore the model development in the Jupyter notebook:
 The dashboard reflects live market data. Since Crude Oil Futures close on weekends, the dashboard will display the final Friday close signal until the market re-opens on Sunday evening.
 
 ---
-* Use for educational purposes only.*
+*Use for educational purposes only.*
