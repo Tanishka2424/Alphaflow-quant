@@ -11,10 +11,15 @@ Location: F:/commodity_trading_project/src/backtest/engine.py
 from __future__ import annotations
 
 import os
+
+
+
 import numpy as np
 import pandas as pd
 import yfinance as yf
+
 import tensorflow as tf
+
 from joblib import load
 
 from config import (
@@ -68,9 +73,11 @@ class LiveBacktester:
     def load_resources(self) -> None:
         """Load the Keras model and scaler from disk."""
         print(f"Loading model  → {self.model_path}")
-        self.model  = tf.keras.models.load_model(self.model_path)
+        self.model = tf.keras.models.load_model(self.model_path)
         print(f"Loading scaler → {self.scaler_path}")
         self.scaler = load(self.scaler_path)
+        print("Model and scaler loaded successfully.")
+     
 
     # ------------------------------------------------------------------
     # Data fetching
@@ -179,7 +186,7 @@ class LiveBacktester:
         except Exception as exc:
             return None, str(exc)
 
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------
     # Backtesting
     # ------------------------------------------------------------------
 

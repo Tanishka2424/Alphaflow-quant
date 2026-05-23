@@ -11,9 +11,12 @@ from __future__ import annotations
 
 import json
 import os
+os.environ["TF_USE_LEGACY_KERAS"] = "1" 
+python -c "import yfinance as yf; d = yf.download('BTC-USD', period='1d', interval='5m', progress=False); print(len(d))"
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import tf_keras
 from joblib import load
 
 from config import (
@@ -61,7 +64,7 @@ class CNNLSTMPredictor:
     def load(self) -> None:
         """Load model weights and scaler from disk."""
         print(f"Loading model  → {self.model_path}")
-        self.model  = tf.keras.models.load_model(self.model_path)
+        self.model = tf_keras.models.load_model(self.model_path)
         print(f"Loading scaler → {self.scaler_path}")
         self.scaler = load(self.scaler_path)
         print("Model and scaler loaded successfully.")
